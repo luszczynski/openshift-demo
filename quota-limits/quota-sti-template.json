@@ -1,0 +1,290 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "quota-template",
+    "creationTimestamp": null,
+    "annotations": {
+      "description": "An example PHP application with quota",
+      "iconClass": "icon-php",
+      "tags": "instant-app,php"
+    }
+  },
+  "objects": [
+    {
+      "kind": "Service",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "quota",
+        "labels": {
+          "app": "quota"
+        },
+        "annotations": {
+          "description": "Exposes and load balances the application pods"
+        }
+      },
+      "spec": {
+        "ports": [
+          {
+            "name": "web",
+            "protocol": "TCP",
+            "port": 8080,
+            "targetPort": 8080
+          }
+        ],
+        "selector": {
+          "name": "quota"
+        }
+      }
+    },
+    {
+      "kind": "Route",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "quota",
+        "labels": {
+          "app": "quota"
+        }
+      },
+      "spec": {
+        "host": "${APPLICATION_DOMAIN}",
+        "to": {
+          "kind": "Service",
+          "name": "quota"
+        },
+        "port": {
+          "targetPort": 8080
+        }
+      }
+    },
+    {
+      "kind": "ImageStream",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "quota",
+        "annotations": {
+          "description": "Keeps track of changes in the application image"
+        },
+        "labels": {
+          "app": "quota"
+        }
+      }
+    },
+    {
+      "kind": "BuildConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "quota",
+        "annotations": {
+          "description": "Defines how to build the application"
+        },
+        "labels": {
+          "app": "quota"
+        }
+      },
+      "spec": {
+        "source": {
+          "type": "Git",
+          "git": {
+            "uri": "${SOURCE_REPOSITORY_URL}",
+            "ref": "${SOURCE_REPOSITORY_REF}"
+          },
+          "contextDir": "${CONTEXT_DIR}"
+        },
+        "strategy": {
+          "type": "Source",
+          "sourceStrategy": {
+            "from": {
+              "kind": "ImageStreamTag",
+              "namespace": "openshift",
+              "name": "php:5.6"
+            }
+          }
+        },
+        "output": {
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "quota:latest"
+          }
+        },
+        "resources": {
+          "limits": {
+            "cpu": "${BUILD_PHP_RESOURCES_LIMITS_CPU}",
+            "memory": "${BUILD_PHP_RESOURCES_LIMITS_MEMORY}"
+          }
+        },
+        "triggers": [
+          {
+            "type": "ImageChange"
+          },
+          {
+            "type": "ConfigChange"
+          },
+          {
+            "type": "GitHub",
+            "github": {
+              "secret": "${GITHUB_WEBHOOK_SECRET}"
+            }
+          },
+          {
+            "type": "Generic",
+            "generic": {
+              "secret": "${GENERIC_WEBHOOK_SECRET}"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "DeploymentConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "quota",
+        "annotations": {
+          "description": "Defines how to deploy the application server"
+        },
+        "labels": {
+          "app": "quota"
+        }
+      },
+      "spec": {
+        "strategy": {
+          "type": "Rolling",
+          "rollingParams": {
+            "updatePeriodSeconds": 1,
+            "intervalSeconds": 1,
+            "timeoutSeconds": 600,
+            "maxUnavailable": "25%",
+            "maxSurge": "25%"
+          },
+          "resources": {
+            "limits": {
+              "cpu": "${DEPLOY_PHP_RESOURCES_LIMITS_CPU}",
+              "memory": "${DEPLOY_PHP_RESOURCES_LIMITS_MEMORY}"
+            }
+          }
+        },
+        "triggers": [
+          {
+            "type": "ImageChange",
+            "imageChangeParams": {
+              "automatic": true,
+              "containerNames": [
+                "quota"
+              ],
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "quota:latest"
+              }
+            }
+          },
+          {
+            "type": "ConfigChange"
+          }
+        ],
+        "replicas": 1,
+        "selector": {
+          "name": "quota"
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "name": "quota",
+              "app": "quota"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "quota",
+                "image": "quota",
+                "ports": [
+                  {
+                    "containerPort": 8080
+                  }
+                ],
+                "env": [
+                  {
+                    "name": "DATABASE_SERVICE_NAME",
+                    "value": "${DATABASE_SERVICE_NAME}"
+                  }
+                ],
+                "resources": {
+                  "limits": {
+                    "cpu": "${PHP_RESOURCES_LIMITS_CPU}",
+                    "memory": "${PHP_RESOURCES_LIMITS_MEMORY}"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "status": {}
+    }
+  ],
+  "parameters": [
+    {
+      "name": "SOURCE_REPOSITORY_URL",
+      "description": "The URL of the repository with your application source code",
+      "value": "https://github.com/openshift/cakephp-ex.git"
+    },
+    {
+      "name": "SOURCE_REPOSITORY_REF",
+      "description": "Set this to a branch name, tag or other ref of your repository if you are not using the default branch"
+    },
+    {
+      "name": "CONTEXT_DIR",
+      "description": "Set this to the relative path to your project if it is not in the root of your repository"
+    },
+    {
+      "name": "APPLICATION_DOMAIN",
+      "description": "The exposed hostname that will route to the CakePHP service, if left blank a value will be defaulted."
+    },
+    {
+      "name": "GITHUB_WEBHOOK_SECRET",
+      "description": "A secret string used to configure the GitHub webhook",
+      "generate": "expression",
+      "from": "[a-zA-Z0-9]{40}"
+    },
+    {
+      "name": "GENERIC_WEBHOOK_SECRET",
+      "description": "A secret string used to configure the Generic webhook",
+      "generate": "expression",
+      "from": "[a-zA-Z0-9]{40}"
+    },
+    {
+      "name": "BUILD_PHP_RESOURCES_LIMITS_MEMORY",
+      "description": "build php memory limit",
+      "value": "50Mi"
+    },
+    {
+      "name": "BUILD_PHP_RESOURCES_LIMITS_CPU",
+      "description": "build php cpu limit",
+      "value": "20m"
+    },
+    {
+      "name": "DEPLOY_PHP_RESOURCES_LIMITS_MEMORY",
+      "description": "deploy php memory limit",
+      "value": "50Mi"
+    },
+    {
+      "name": "DEPLOY_PHP_RESOURCES_LIMITS_CPU",
+      "description": "deploy php cpu limit",
+      "value": "20m"
+    },
+    {
+      "name": "PHP_RESOURCES_LIMITS_MEMORY",
+      "description": "php memory limit",
+      "value": "100Mi"
+    },
+    {
+      "name": "PHP_RESOURCES_LIMITS_CPU",
+      "description": "php cpu limit",
+      "value": "200m"
+    }
+  ],
+  "labels": {
+    "template": "quota"
+  }
+}

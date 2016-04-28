@@ -1,0 +1,17 @@
+{
+  "apiVersion": "v1",
+  "kind": "ResourceQuota",
+  "metadata": {
+    "name": "quota"
+  },
+  "spec": {
+    "hard": {
+      "memory": "2Gi",
+      "cpu": "1",
+      "pods": "5",
+      "services": "5",
+      "replicationcontrollers":"5",
+      "resourcequotas":"1"
+    }
+  }
+}
