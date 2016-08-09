@@ -1,0 +1,43 @@
+---
+- include_vars: ../vars.yml
+
+# Installing
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+
+- name: Checking if blue-green-deployment project is already created
+  shell: oc get projects | grep blue-green-deployment || true
+  register: bg_project_installed
+
+- name: Create blue-green-deployment project
+  shell: oc new-project blue-green-deployment --display-name="Blue Green Deployment" --description="An example of a technique for releasing your application in a predictable manner with an goal of reducing any downtime associated with a release"
+  when: bg_project_installed.stdout == "" and uninstall is undefined
+
+- name: Adding admin permission to user {{openshift_user}}
+  shell: oc policy add-role-to-user admin {{openshift_user}} -n blue-green-deployment
+  when: bg_project_installed.stdout == "" and uninstall is undefined
+
+- name: Checking if blue-green template is already installed
+  shell: oc get templates -n openshift | grep blue-green-template || true
+  register: bg_template_installed
+
+- name: Copy template to remote machine
+  copy: src=blue-green-deployment/blue-green-deployment-sti-template.json dest=/tmp/blue-green-deployment-sti-template.json
+  when: bg_template_installed.stdout == "" and uninstall is undefined
+
+- name: Create blue-green-deployment template
+  shell: oc create -f /tmp/blue-green-deployment-sti-template.json -n openshift
+  when: bg_template_installed.stdout == "" and uninstall is undefined
+
+- name: Create example app
+  shell: oc new-app blue-green-template -n blue-green-deployment
+  when: bg_template_installed.stdout == "" and uninstall is undefined
+
+    # Uninstalling
+- name: Deleting blue-green-deployment project
+  shell: oc delete project blue-green-deployment
+  when: bg_project_installed.stdout != "" and uninstall is defined
+
+- name: Deleting blue-green-deployment template
+  shell: oc delete template blue-green-template -n openshift
+  when: bg_template_installed.stdout != "" and uninstall is defined

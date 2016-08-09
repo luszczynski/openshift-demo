@@ -1,0 +1,126 @@
+---
+# https://blog.openshift.com/pipelines-with-jenkins-2-on-openshift/
+# https://github.com/eformat/openshift-nexus
+- include_vars: ../vars.yml
+
+- name: Checking if ci-cd project is already created
+  shell: oc get projects | grep ci-cd || true
+  register: ci_cd_project_installed
+
+- name: Create ci-cd project
+  shell: oc new-project ci-cd --display-name="CI/CD for OpenShift" --description="Continuous Integration/Deployment for OpenShift"
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Adding admin permission to user {{openshift_user}}
+  shell: oc policy add-role-to-user admin {{openshift_user}} -n ci-cd
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Copy pv e pvc to remote machine
+  copy: src=ci-cd/storage/{{item}} dest=/tmp/{{item}}
+  with_items:
+    - gogs-pv.yaml
+    - gogs-pvc.yaml
+    - jenkins-pv.yaml
+    - jenkins-pvc.yaml
+    - nexus-pv.yaml
+    - nexus-pvc.yaml
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create PVs
+  shell: oc create -f /tmp/{{item}}-pv.yaml
+  with_items:
+    - jenkins
+    - gogs
+    - nexus
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create Gogs PVC
+  shell:  oc create -f /tmp/gogs-pvc.yaml -n ci-cd
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create exports
+  file: path=/exports/{{item}} state=directory owner=nfsnobody group=nfsnobody mode=0777
+  with_items:
+    - jenkins
+    - nexus
+    - gogs
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Update /etc/exports for jenkins and nexus
+  lineinfile: dest=/etc/exports state=present backup=yes line="/exports/{{item}} *(rw,root_squash)"
+  with_items:
+    - jenkins
+    - nexus
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Update /etc/exports for gogs
+  lineinfile: dest=/etc/exports state=present backup=yes line="/exports/gogs *(rw,no_root_squash)"
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Restart NFS
+  service: name=nfs state=restarted
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create jenkins build
+  shell: oc create -f https://raw.githubusercontent.com/luszczynski/custom-jenkins-ose-config/master/custom-jenkins.build.yaml -n openshift && oc start-build custom-jenkins-pipeline-build -n openshift
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Waiting jenkins builds...
+  shell: oc get builds -n openshift
+  register: build_status
+  until: build_status.stdout.find("Complete") > -1
+  retries: 30
+  delay: 30
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create jenkins build
+  shell: oc new-app jenkins-ephemeral -n ci-cd
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create gogs
+  shell: (oc create serviceaccount gogs -n ci-cd || true) && oadm policy add-scc-to-user privileged system:serviceaccount:ci-cd:gogs && oc process -f https://raw.githubusercontent.com/luszczynski/openshift-gogs-template/master/gogs-standalone-template.yml | oc create -f - -n ci-cd
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Attach volume to Gogs
+  shell: oc volume dc/gogs --add --overwrite -t persistentVolumeClaim --claim-name gogs-pvc -m /data --name gogs-volume
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create nexus
+  #shell: oc new-app sonatype/nexus:oss -n ci-cd && oc expose service nexus -n ci-cd
+  shell: oc create -f https://raw.githubusercontent.com/luszczynski/nexus-ose/master/nexus/ose3/nexus-resources.json && oc new-app nexus-persistent --param=SIZE=3Gi -n ci-cd
+  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+# oc delete all -l application=nexus-ephemeral
+# oc delete bc nexus
+# oc delete is nexus rhel
+# oc delete sa nexus
+# oc delete templates nexus-ephemeral nexus-persistent
+
+# - name: Attach volume to Nexus
+#   shell: (oc volume dc/nexus --remove --name=nexus-volume-1 || true) && oc volume dc/nexus --add --overwrite -t persistentVolumeClaim --claim-name nexus-pvc -m /sonatype-work --name nexus-volume
+#   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+# Uninstalling
+- name: Deleting ci-cd project
+  shell: oc delete project ci-cd
+  when: ci_cd_project_installed.stdout != "" and uninstall is defined
+
+- name: Deleting pvs
+  shell: oc delete pv {{item}} || true
+  with_items:
+    - gogs-pv
+    - jenkins-pv
+    - nexus-pv
+  when: uninstall is defined
+
+- name: Deleting kitchensink projects
+  shell: oc delete projects kitchensink kitchensink-qa kitchensink-test kitchensink-dev || true
+  when: uninstall is defined
+
+- name: Deleting builds on openshift project
+  shell: oc delete bc custom-jenkins-pipeline-build -n openshift || true
+  when: uninstall is defined
+
+# - name: Deleting liveness-readiness template
+#   shell: oc delete template liveness-readiness-template -n openshift
+#   when: lv_template_installed.stdout != "" and uninstall is defined

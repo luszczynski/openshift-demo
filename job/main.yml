@@ -1,0 +1,43 @@
+---
+- include_vars: ../vars.yml
+
+# Installing
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+
+- name: Checking if job project is already created
+  shell: oc get projects | grep job || true
+  register: job_project_installed
+
+- name: Create job project
+  shell: oc new-project job --display-name="Job" --description="Batch processing using Jobs"
+  when: job_project_installed.stdout == "" and uninstall is undefined
+
+- name: Adding admin permission to user {{openshift_user}}
+  shell: oc policy add-role-to-user admin {{openshift_user}} -n job
+  when: job_project_installed.stdout == "" and uninstall is undefined
+
+- name: Checking if job template is already installed
+  shell: oc get templates -n openshift | grep job-template || true
+  register: job_template_installed
+
+- name: Copy template to remote machine
+  copy: src=job/job-template.json dest=/tmp/job-template.json
+  when: job_template_installed.stdout == "" and uninstall is undefined
+
+- name: Create job template
+  shell: oc create -f /tmp/job-template.json -n openshift
+  when: job_template_installed.stdout == "" and uninstall is undefined
+
+- name: Create example app
+  shell: oc new-app job-template -n job
+  when: job_template_installed.stdout == "" and uninstall is undefined
+
+  # Uninstalling
+- name: Deleting job project
+  shell: oc delete project job
+  when: job_project_installed.stdout != "" and uninstall is defined
+
+- name: Deleting job template
+  shell: oc delete template job-template -n openshift
+  when: job_template_installed.stdout != "" and uninstall is defined

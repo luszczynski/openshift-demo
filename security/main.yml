@@ -1,0 +1,8 @@
+---
+- name: Checking if security project is already created
+  shell: oc get projects | grep security || true
+  register: security_project_installed
+
+- name: Create security project
+  shell: oc new-project security --display-name="Security" --description="Images security with Openshift triggers"
+  when: devops_project_installed.stdout == ""

@@ -1,0 +1,35 @@
+---
+- include_vars: ../vars.yml
+
+# Installing
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+
+- name: Checking if hexboard project is already created
+  shell: oc get projects | grep hexboard || true
+  register: hexboard_project_installed
+
+- name: Create hexboard project
+  shell: oc new-project hexboard --display-name="Hexboard" --description="Hexboard example from Red Hat Summit"
+  when: hexboard_project_installed.stdout == "" and uninstall is undefined
+
+- name: Adding admin permission to user {{openshift_user}}
+  shell: oc policy add-role-to-user admin {{openshift_user}} -n hexboard
+  when: hexboard_project_installed.stdout == "" and uninstall is undefined
+
+- name: Logging with {{openshift_user}}
+  shell: oc login -u {{openshift_user}} -p {{openshift_pass}}
+  when: hexboard_project_installed.stdout == "" and uninstall is undefined
+
+- name: Create example app
+  shell: oc new-app -f https://raw.githubusercontent.com/luszczynski/hexboard/master/app_template.json -p ACCESS_TOKEN=$(oc whoami -t) -n hexboard
+  when: hexboard_project_installed.stdout == "" and uninstall is undefined
+
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+  when: hexboard_project_installed.stdout == "" and uninstall is undefined
+
+  # Uninstalling
+- name: Deleting hexboard project
+  shell: oc delete project hexboard
+  when: hexboard_project_installed.stdout != "" and uninstall is defined

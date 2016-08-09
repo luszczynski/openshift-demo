@@ -1,0 +1,23 @@
+#https://blog.openshift.com/override-s2i-builder-scripts/
+---
+- include_vars: ../vars.yml
+
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+
+- name: Checking if sti project is already created
+  shell: oc get projects | grep ^sti || true
+  register: sti_project_installed
+
+- name: Create sti project
+  shell: oc new-project sti --display-name="Source-to-Image" --description="A s2i example"
+  when: sti_project_installed.stdout == "" and uninstall is undefined
+
+- name: Adding admin permission to user {{openshift_user}}
+  shell: oc policy add-role-to-user admin {{openshift_user}} -n sti
+  when: sti_project_installed.stdout == "" and uninstall is undefined
+
+# Uninstalling
+- name: Deleting sti project
+  shell: oc delete project sti
+  when: sti_project_installed.stdout != "" and uninstall is defined

@@ -1,0 +1,43 @@
+---
+- include_vars: ../vars.yml
+
+# Installing
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+
+- name: Checking if auto-scaling project is already created
+  shell: oc get projects | grep auto-scaling || true
+  register: as_project_installed
+
+- name: Create auto-scaling project
+  shell: oc new-project auto-scaling --display-name="Auto-scaling" --description="A simple autoscaling example"
+  when: as_project_installed.stdout == "" and uninstall is undefined
+
+- name: Adding admin permission to user {{openshift_user}}
+  shell: oc policy add-role-to-user admin {{openshift_user}} -n auto-scaling
+  when: as_project_installed.stdout == "" and uninstall is undefined
+
+- name: Checking if auto-scaling template is already installed
+  shell: oc get templates -n openshift | grep auto-scaling-template || true
+  register: as_template_installed
+
+- name: Copy template to remote machine
+  copy: src=auto-scaling/auto-scaling-sti-template.json dest=/tmp/auto-scaling-sti-template.json
+  when: as_template_installed.stdout == "" and uninstall is undefined
+
+- name: Create auto-scaling template
+  shell: oc create -f /tmp/auto-scaling-sti-template.json -n openshift
+  when: as_template_installed.stdout == "" and uninstall is undefined
+
+- name: Create example app
+  shell: oc new-app auto-scaling-template -n auto-scaling
+  when: as_template_installed.stdout == "" and uninstall is undefined
+
+  # Uninstalling
+- name: Deleting auto-scaling project
+  shell: oc delete project auto-scaling
+  when: as_project_installed.stdout != "" and uninstall is defined
+
+- name: Deleting auto-scaling template
+  shell: oc delete template auto-scaling-template -n openshift
+  when: as_template_installed.stdout != "" and uninstall is defined

@@ -1,0 +1,4 @@
+openshift_user: root
+openshift_pass: redhat@123
+
+exports_dir: /exports

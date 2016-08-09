@@ -1,0 +1,23 @@
+---
+- hosts: master
+  tasks:
+    - include: ab-testing/main.yml
+      tags: [ab-testing]
+    - include: auto-scaling/main.yml
+      tags: [auto-scaling]
+    - include: blue-green-deployment/main.yml
+      tags: [blue-green-deployment]
+    - include: ci-cd/main.yml
+      tags: [ci-cd]
+    - include: hexboard/main.yml
+      tags: [hexboard]
+    - include: job/main.yml
+      tags: [job]
+    - include: liveness-readiness/main.yml
+      tags: [liveness-readiness]
+    - include: quota-limits/main.yml
+      tags: [quota]
+    - include: security/main.yml
+      tags: [security]
+    - include: sti/main.yml
+      tags: [sti]

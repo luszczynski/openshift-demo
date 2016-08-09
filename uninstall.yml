@@ -1,0 +1,23 @@
+---
+- hosts: master
+  tasks:
+    - include: ab-testing/main.yml uninstall=true
+      tags: [ab-testing]
+    - include: auto-scaling/main.yml uninstall=true
+      tags: [auto-scaling]
+    - include: blue-green-deployment/main.yml uninstall=true
+      tags: [blue-green-deployment]
+    - include: ci-cd/main.yml uninstall=true
+      tags: [ci-cd]
+    - include: hexboard/main.yml uninstall=true
+      tags: [hexboard]
+    - include: job/main.yml uninstall=true
+      tags: [job]
+    - include: liveness-readiness/main.yml uninstall=true
+      tags: [liveness-readiness]
+    - include: quota-limits/main.yml uninstall=true
+      tags: [quota]
+    - include: security/main.yml uninstall=true
+      tags: [security]
+    - include: sti/main.yml uninstall=true
+      tags: [sti]

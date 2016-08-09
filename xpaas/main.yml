@@ -1,0 +1,4 @@
+---
+- name: Checking if xpaas-jboss project is already created
+  shell: oc get projects | grep xpaas-jboss || true
+  register: jboss_project_installed

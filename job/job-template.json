@@ -1,0 +1,69 @@
+{
+  "kind": "Template",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "job-template",
+    "creationTimestamp": null,
+    "annotations": {
+      "description": "An example Perl Job application",
+      "iconClass": "icon-perl",
+      "tags": "instant-app,perl"
+    }
+  },
+  "objects": [
+    {
+      "kind": "Job",
+      "apiVersion": "extensions/v1beta1",
+      "metadata": {
+        "name": "pi"
+      },
+      "spec": {
+        "selector": {
+          "matchLabels": {
+            "app": "pi"
+          }
+        },
+        "parallelism": "${PARALLELISM}",
+        "completions": "${COMPLETION}",
+        "template": {
+          "metadata": {
+            "name": "pi",
+            "labels": {
+              "app": "pi"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "name": "pi",
+                "image": "perl",
+                "command": [
+                  "perl",
+                  "-Mbignum=bpi",
+                  "-wle",
+                  "print bpi(2000)"
+                ]
+              }
+            ],
+            "restartPolicy": "Never"
+          }
+        }
+      }
+    }
+  ],
+  "parameters": [
+      {
+          "name": "COMPLETION",
+          "description": "completions",
+          "value": "1"
+      },
+      {
+          "name": "PARALLELISM",
+          "description": "Parallelism",
+          "value": "1"
+      }
+  ],
+  "labels": {
+      "template": "job-template"
+  }
+}

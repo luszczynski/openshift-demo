@@ -1,0 +1,10 @@
+---
+- name: Checking if ab-testing project is already created
+  shell: oc get projects | grep ab-testing || true
+  register: ab_project_installed
+
+- name: Create ab-testing project
+  shell: oc new-project ab-testing --display-name="AB Testing" --description="A/B testing is a way of testing features in your application for various reasons like usability, popularity, noticeability, etc, and how those factors influence the bottom line"
+  when: ab_project_installed.stdout == "" and uninstall is undefined
+
+  

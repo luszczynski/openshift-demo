@@ -11,6 +11,63 @@
     }
   },
   "objects": [
+      {
+          "kind": "LimitRange",
+          "apiVersion": "v1",
+          "metadata": {
+              "name": "limits",
+              "creationTimestamp": null
+          },
+          "spec": {
+              "limits": [
+                  {
+                      "type": "Pod",
+                      "max": {
+                          "cpu": "500m",
+                          "memory": "750Mi"
+                      },
+                      "min": {
+                          "cpu": "10m",
+                          "memory": "5Mi"
+                      }
+                  },
+                  {
+                      "type": "Container",
+                      "max": {
+                          "cpu": "500m",
+                          "memory": "750Mi"
+                      },
+                      "min": {
+                          "cpu": "10m",
+                          "memory": "5Mi"
+                      },
+                      "default": {
+                          "cpu": "100m",
+                          "memory": "100Mi"
+                      }
+                  }
+              ]
+          }
+      },
+
+      {
+        "apiVersion": "v1",
+        "kind": "ResourceQuota",
+        "metadata": {
+          "name": "quota"
+        },
+        "spec": {
+          "hard": {
+            "memory": "2Gi",
+            "cpu": "1",
+            "pods": "5",
+            "services": "5",
+            "replicationcontrollers":"5",
+            "resourcequotas":"1"
+          }
+        }
+    },
+
     {
       "kind": "Service",
       "apiVersion": "v1",
@@ -256,22 +313,22 @@
     {
       "name": "BUILD_PHP_RESOURCES_LIMITS_MEMORY",
       "description": "build php memory limit",
-      "value": "50Mi"
+      "value": "500Mi"
     },
     {
       "name": "BUILD_PHP_RESOURCES_LIMITS_CPU",
       "description": "build php cpu limit",
-      "value": "20m"
+      "value": "500m"
     },
     {
       "name": "DEPLOY_PHP_RESOURCES_LIMITS_MEMORY",
       "description": "deploy php memory limit",
-      "value": "50Mi"
+      "value": "500Mi"
     },
     {
       "name": "DEPLOY_PHP_RESOURCES_LIMITS_CPU",
       "description": "deploy php cpu limit",
-      "value": "20m"
+      "value": "500m"
     },
     {
       "name": "PHP_RESOURCES_LIMITS_MEMORY",
