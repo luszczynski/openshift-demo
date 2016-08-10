@@ -5,10 +5,12 @@
 
 - name: Logging with system:admin
   shell: oc login -u system:admin
+  changed_when: False
 
 - name: Checking if ci-cd project is already created
   shell: oc get projects | grep ci-cd || true
   register: ci_cd_project_installed
+  changed_when: False
 
 - name: Create ci-cd project
   shell: oc new-project ci-cd --display-name="CI/CD for OpenShift" --description="Continuous Integration/Deployment for OpenShift"

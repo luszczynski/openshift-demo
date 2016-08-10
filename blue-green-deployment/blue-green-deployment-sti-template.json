@@ -5,9 +5,9 @@
         "name": "blue-green-template",
         "creationTimestamp": null,
         "annotations": {
-            "description": "An example PHP application with blue green deployment pattern",
-            "iconClass": "icon-php",
-            "tags": "instant-app,php"
+            "description": "An example NodeJS application with blue green deployment pattern",
+            "iconClass": "icon-nodejs",
+            "tags": "instant-app,nodejs"
         }
     },
     "objects": [
@@ -125,7 +125,7 @@
                 "source": {
                     "type": "Git",
                     "git": {
-                        "uri": "https://github.com/luszczynski/bluegreen",
+                        "uri": "https://github.com/luszczynski/blue-green-deployment.git",
                         "ref": "blue"
                     },
                     "contextDir": ""
@@ -136,7 +136,7 @@
                         "from": {
                             "kind": "ImageStreamTag",
                             "namespace": "openshift",
-                            "name": "php:5.6"
+                            "name": "nodejs:latest"
                         }
                     }
                 },
@@ -172,7 +172,7 @@
                 "source": {
                     "type": "Git",
                     "git": {
-                        "uri": "https://github.com/luszczynski/bluegreen",
+                        "uri": "https://github.com/luszczynski/blue-green-deployment.git",
                         "ref": "green"
                     },
                     "contextDir": ""
@@ -183,7 +183,7 @@
                         "from": {
                             "kind": "ImageStreamTag",
                             "namespace": "openshift",
-                            "name": "php:5.6"
+                            "name": "nodejs:latest"
                         }
                     }
                 },
@@ -356,7 +356,7 @@
         },
         {
             "name": "APPLICATION_DOMAIN",
-            "description": "The exposed hostname that will route to the CakePHP service, if left blank a value will be defaulted."
+            "description": "The exposed hostname that will route to the service, if left blank a value will be defaulted."
         }
     ],
     "labels": {
