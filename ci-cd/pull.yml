@@ -1,0 +1,10 @@
+---
+- include_vars: ../vars.yml
+
+- name: Pulling necessary images
+  shell: docker pull {{item}}
+  with_items:
+    - fabric8/gogs:2.2.218
+    - luszczynski/nexus:oss
+    - registry.access.redhat.com/openshift3/jenkins-1-rhel7
+  when: uninstall is undefined

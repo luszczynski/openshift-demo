@@ -3,6 +3,9 @@
 # https://github.com/eformat/openshift-nexus
 - include_vars: ../vars.yml
 
+- name: Logging with system:admin
+  shell: oc login -u system:admin
+
 - name: Checking if ci-cd project is already created
   shell: oc get projects | grep ci-cd || true
   register: ci_cd_project_installed
@@ -18,33 +21,36 @@
 - name: Copy pv e pvc to remote machine
   copy: src=ci-cd/storage/{{item}} dest=/tmp/{{item}}
   with_items:
-    - gogs-pv.yaml
-    - gogs-pvc.yaml
     - jenkins-pv.yaml
-    - jenkins-pvc.yaml
     - nexus-pv.yaml
-    - nexus-pvc.yaml
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Create PVs
+- name: Create PVs for jenkins and nexus
   shell: oc create -f /tmp/{{item}}-pv.yaml
   with_items:
     - jenkins
-    - gogs
     - nexus
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Create Gogs PVC
-  shell:  oc create -f /tmp/gogs-pvc.yaml -n ci-cd
-  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+# - name: Create PVs for gogs
+#   shell: oc create -f https://raw.githubusercontent.com/luszczynski/gogs-openshift/master/gogs-{{item}}-pv.yaml
+#   with_items:
+#     - git
+#     - data
+#   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Create exports
+- name: Create exports for jenkins and nexus
   file: path=/exports/{{item}} state=directory owner=nfsnobody group=nfsnobody mode=0777
   with_items:
     - jenkins
     - nexus
-    - gogs
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+
+# - name: Create exports for gogs
+#   file: path=/exports/gogs-{{item}} state=directory owner=nfsnobody group=nfsnobody mode=0777
+#   with_items:
+#     - data
+#   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
 - name: Update /etc/exports for jenkins and nexus
   lineinfile: dest=/etc/exports state=present backup=yes line="/exports/{{item}} *(rw,root_squash)"
@@ -53,17 +59,24 @@
     - nexus
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Update /etc/exports for gogs
-  lineinfile: dest=/etc/exports state=present backup=yes line="/exports/gogs *(rw,no_root_squash)"
-  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+# - name: Update /etc/exports for gogs
+#   lineinfile: dest=/etc/exports state=present backup=yes line="/exports/gogs-{{item}} *(rw,no_root_squash)"
+#   with_items:
+#     - git
+#     - data
+#   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
 - name: Restart NFS
   service: name=nfs state=restarted
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
+- name: Checking if jenkins image stream already exists
+  shell: oc get is -n openshift | grep jen | grep 172.30 || true
+  register: jenkins_is
+
 - name: Create jenkins build
   shell: oc create -f https://raw.githubusercontent.com/luszczynski/custom-jenkins-ose-config/master/custom-jenkins.build.yaml -n openshift && oc start-build custom-jenkins-pipeline-build -n openshift
-  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+  when: jenkins_is.stdout == "" and ci_cd_project_installed.stdout == "" and uninstall is undefined
 
 - name: Waiting jenkins builds...
   shell: oc get builds -n openshift
@@ -71,23 +84,23 @@
   until: build_status.stdout.find("Complete") > -1
   retries: 30
   delay: 30
-  when: ci_cd_project_installed.stdout == "" and uninstall is undefined
+  when: jenkins_is.stdout == "" and ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Create jenkins build
+- name: Create jenkins app
   shell: oc new-app jenkins-ephemeral -n ci-cd
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Create gogs
-  shell: (oc create serviceaccount gogs -n ci-cd || true) && oadm policy add-scc-to-user privileged system:serviceaccount:ci-cd:gogs && oc process -f https://raw.githubusercontent.com/luszczynski/openshift-gogs-template/master/gogs-standalone-template.yml | oc create -f - -n ci-cd
+- name: Create sa for gogs and adjust permission
+  shell: (oc create serviceaccount gogs -n ci-cd || true) && oadm policy add-scc-to-user privileged system:serviceaccount:ci-cd:gogs
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
-- name: Attach volume to Gogs
-  shell: oc volume dc/gogs --add --overwrite -t persistentVolumeClaim --claim-name gogs-pvc -m /data --name gogs-volume
+- name: Create gogs
+  shell: oc process -f https://raw.githubusercontent.com/luszczynski/gogs-openshift/master/gogs-persistent-template.json | oc create -f - -n ci-cd
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
 - name: Create nexus
-  #shell: oc new-app sonatype/nexus:oss -n ci-cd && oc expose service nexus -n ci-cd
-  shell: oc create -f https://raw.githubusercontent.com/luszczynski/nexus-ose/master/nexus/ose3/nexus-resources.json && oc new-app nexus-persistent --param=SIZE=3Gi -n ci-cd
+  shell: oc process -f https://raw.githubusercontent.com/luszczynski/nexus-openshift/master/nexus-persistent-template.json | oc create -f - -n ci-cd
+  #shell: oc create -f https://raw.githubusercontent.com/luszczynski/nexus-ose/master/nexus/ose3/nexus-resources.json && oc new-app nexus-persistent --param=SIZE=3Gi -n ci-cd
   when: ci_cd_project_installed.stdout == "" and uninstall is undefined
 
 # oc delete all -l application=nexus-ephemeral
@@ -111,6 +124,14 @@
     - gogs-pv
     - jenkins-pv
     - nexus-pv
+  when: uninstall is defined
+
+- name: Delete folders on nfs
+  file: path=/exports/{{item}} state=absent
+  with_items:
+    - gogs
+    - nexus
+    #- jenkins
   when: uninstall is defined
 
 - name: Deleting kitchensink projects

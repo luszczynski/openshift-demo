@@ -1,4 +1,8 @@
 ---
+# - hosts: all
+#   tasks:
+#     - include: ci-cd/pull.yml
+#       tags: [ci-cd]
 - hosts: master
   tasks:
     - include: ab-testing/main.yml
