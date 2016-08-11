@@ -18,7 +18,7 @@
                 "name": "app-a",
                 "labels": {
                     "app": "ab-testing",
-                    "abgroupmember": true
+                    "abgroupmember": "true"
                 },
                 "annotations": {
                     "description": "Exposes and load balances the application pods"
@@ -45,7 +45,7 @@
                 "name": "app-b",
                 "labels": {
                     "app": "ab-testing",
-                    "abgroupmember": true
+                    "abgroupmember": "true"
                 },
                 "annotations": {
                     "description": "Exposes and load balances the application pods"
@@ -87,7 +87,7 @@
                     }
                 ],
                 "selector": {
-                    "abgroupmember": true
+                    "abgroupmember": "true"
                 }
             }
         },
@@ -241,7 +241,7 @@
                 },
                 "labels": {
                     "app": "ab-testing",
-                    "abgroupmember": true
+                    "abgroupmember": "true"
                 }
             },
             "spec": {
@@ -276,7 +276,7 @@
                 "replicas": 1,
                 "selector": {
                     "name": "app-a",
-                    "abgroupmember": true
+                    "abgroupmember": "true"
                 },
                 "template": {
                     "metadata": {
