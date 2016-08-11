@@ -1,0 +1,8 @@
+---
+- include_vars: ../vars.yml
+
+- name: Pulling necessary images
+  shell: docker pull {{item}}
+  with_items:
+    - perl
+  when: uninstall is undefined
