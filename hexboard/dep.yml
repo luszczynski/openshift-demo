@@ -1,0 +1,8 @@
+---
+- include_vars: ../vars.yml
+
+- name: Pulling necessary images
+  shell: docker pull {{item}}
+  with_items:
+    - registry.access.redhat.com/openshift3/nodejs-010-rhel7
+  when: uninstall is undefined

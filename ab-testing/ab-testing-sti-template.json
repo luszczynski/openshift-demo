@@ -1,0 +1,395 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "ab-testing-template",
+        "creationTimestamp": null,
+        "annotations": {
+            "description": "An example PHP application with ab testing pattern",
+            "iconClass": "icon-php",
+            "tags": "instant-app,php"
+        }
+    },
+    "objects": [
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-a",
+                "labels": {
+                    "app": "ab-testing",
+                    "abgroupmember": true
+                },
+                "annotations": {
+                    "description": "Exposes and load balances the application pods"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "web",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "name": "app-a"
+                }
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-b",
+                "labels": {
+                    "app": "ab-testing",
+                    "abgroupmember": true
+                },
+                "annotations": {
+                    "description": "Exposes and load balances the application pods"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "web",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "name": "app-b"
+                }
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "ab-service",
+                "labels": {
+                    "app": "ab-testing"
+                },
+                "annotations": {
+                    "description": "Exposes and load balances the application pods"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "web",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "abgroupmember": true
+                }
+            }
+        },
+        {
+            "kind": "Route",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "ab-testing",
+                "labels": {
+                    "app": "ab-testing"
+                }
+            },
+            "spec": {
+                "host": "${APPLICATION_DOMAIN}",
+                "to": {
+                    "kind": "Service",
+                    "name": "ab-service"
+                },
+                "port": {
+                    "targetPort": 8080
+                }
+            }
+        },
+        {
+            "kind": "ImageStream",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-a",
+                "annotations": {
+                    "description": "Keeps track of changes in the application image"
+                },
+                "labels": {
+                    "app": "ab-testing"
+                }
+            }
+        },
+        {
+            "kind": "ImageStream",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-b",
+                "annotations": {
+                    "description": "Keeps track of changes in the application image"
+                },
+                "labels": {
+                    "app": "ab-testing"
+                }
+            }
+        },
+        {
+            "kind": "BuildConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-a",
+                "annotations": {
+                    "description": "Defines how to build the application"
+                },
+                "labels": {
+                    "app": "ab-testing"
+                }
+            },
+            "spec": {
+                "source": {
+                    "type": "Git",
+                    "git": {
+                        "uri": "https://github.com/luszczynski/ab-deploy.git",
+                        "ref": "app-a"
+                    },
+                    "contextDir": ""
+                },
+                "strategy": {
+                    "type": "Source",
+                    "sourceStrategy": {
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "namespace": "openshift",
+                            "name": "php:5.6"
+                        }
+                    }
+                },
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "app-a:latest"
+                    }
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange"
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ]
+            }
+        },
+        {
+            "kind": "BuildConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-b",
+                "annotations": {
+                    "description": "Defines how to build the application"
+                },
+                "labels": {
+                    "app": "ab-testing"
+                }
+            },
+            "spec": {
+                "source": {
+                    "type": "Git",
+                    "git": {
+                        "uri": "https://github.com/luszczynski/ab-deploy.git",
+                        "ref": "app-b"
+                    },
+                    "contextDir": ""
+                },
+                "strategy": {
+                    "type": "Source",
+                    "sourceStrategy": {
+                        "from": {
+                            "kind": "ImageStreamTag",
+                            "namespace": "openshift",
+                            "name": "php:latest"
+                        }
+                    }
+                },
+                "output": {
+                    "to": {
+                        "kind": "ImageStreamTag",
+                        "name": "app-b:latest"
+                    }
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange"
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ]
+            }
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-a",
+                "annotations": {
+                    "description": "Defines how to deploy the application server"
+                },
+                "labels": {
+                    "app": "ab-testing",
+                    "abgroupmember": true
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Rolling",
+                    "rollingParams": {
+                        "updatePeriodSeconds": 1,
+                        "intervalSeconds": 1,
+                        "timeoutSeconds": 600,
+                        "maxUnavailable": "25%",
+                        "maxSurge": "25%"
+                    }
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "app-a"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "name": "app-a:latest"
+                            }
+                        }
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 1,
+                "selector": {
+                    "name": "app-a",
+                    "abgroupmember": true
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "name": "app-a",
+                            "app": "app-a"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "app-a",
+                                "image": "app-a",
+                                "ports": [
+                                    {
+                                        "containerPort": 8080
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+
+            "status": {}
+        },
+        {
+            "kind": "DeploymentConfig",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-b",
+                "annotations": {
+                    "description": "Defines how to deploy the application server"
+                },
+                "labels": {
+                    "app": "ab-testing"
+                }
+            },
+            "spec": {
+                "strategy": {
+                    "type": "Rolling",
+                    "rollingParams": {
+                        "updatePeriodSeconds": 1,
+                        "intervalSeconds": 1,
+                        "timeoutSeconds": 600,
+                        "maxUnavailable": "25%",
+                        "maxSurge": "25%"
+                    }
+                },
+                "triggers": [
+                    {
+                        "type": "ImageChange",
+                        "imageChangeParams": {
+                            "automatic": true,
+                            "containerNames": [
+                                "app-b"
+                            ],
+                            "from": {
+                                "kind": "ImageStreamTag",
+                                "name": "app-b:latest"
+                            }
+                        }
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
+                "replicas": 1,
+                "selector": {
+                    "name": "app-b"
+                },
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "name": "app-b",
+                            "app": "app-b"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": "app-b",
+                                "image": "app-b",
+                                "ports": [
+                                    {
+                                        "containerPort": 8080
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+
+            "status": {}
+        }
+    ],
+    "parameters": [
+        {
+            "name": "SOURCE_REPOSITORY_URL",
+            "description": "The URL of the repository with your application source code",
+            "value": "https://github.com/openshift/cakephp-ex.git"
+        },
+        {
+            "name": "SOURCE_REPOSITORY_REF",
+            "description": "Set this to a branch name, tag or other ref of your repository if you are not using the default branch"
+        },
+        {
+            "name": "APPLICATION_DOMAIN",
+            "description": "The exposed hostname that will route to the service, if left blank a value will be defaulted."
+        }
+    ],
+    "labels": {
+        "template": "ab-testing"
+    }
+}

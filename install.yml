@@ -9,6 +9,8 @@
       tags: [blue-green-deployment]
     - include: liveness-readiness/dep.yml
       tags: [liveness-readiness]
+    - include: hexboard/dep.yml
+      tags: [hexboard]
 - hosts: master
   tasks:
     - include: ab-testing/main.yml
