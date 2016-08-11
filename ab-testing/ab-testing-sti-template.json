@@ -275,7 +275,8 @@
                 ],
                 "replicas": 1,
                 "selector": {
-                    "name": "app-a"
+                    "name": "app-a",
+                    "abgroupmember": "true"
                 },
                 "template": {
                     "metadata": {
@@ -311,7 +312,8 @@
                     "description": "Defines how to deploy the application server"
                 },
                 "labels": {
-                    "app": "ab-testing"
+                    "app": "ab-testing",
+                    "abgroupmember": "true"
                 }
             },
             "spec": {
@@ -345,7 +347,8 @@
                 ],
                 "replicas": 1,
                 "selector": {
-                    "name": "app-b"
+                    "name": "app-b",
+                    "abgroupmember": "true"
                 },
                 "template": {
                     "metadata": {
