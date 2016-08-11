@@ -1,8 +1,14 @@
 ---
-# - hosts: all
-#   tasks:
-#     - include: ci-cd/pull.yml
-#       tags: [ci-cd]
+- hosts: all
+  tasks:
+    - include: ci-cd/dep.yml
+      tags: [ci-cd]
+    - include: auto-scaling/dep.yml
+      tags: [auto-scaling]
+    - include: blue-green-deployment/dep.yml
+      tags: [blue-green-deployment]
+    - include: liveness-readiness/dep.yml
+      tags: [liveness-readiness]
 - hosts: master
   tasks:
     - include: ab-testing/main.yml

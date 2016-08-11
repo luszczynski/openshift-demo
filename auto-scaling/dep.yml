@@ -4,7 +4,5 @@
 - name: Pulling necessary images
   shell: docker pull {{item}}
   with_items:
-    - fabric8/gogs:2.2.218
-    - luszczynski/nexus:oss
-    - registry.access.redhat.com/openshift3/jenkins-1-rhel7
+    - registry.access.redhat.com/rhscl/php-56-rhel7
   when: uninstall is undefined
