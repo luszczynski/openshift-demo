@@ -4,10 +4,12 @@
 # Installing
 - name: Logging with system:admin
   shell: oc login -u system:admin
+  changed_when: False
 
 - name: Checking if liveness-readiness project is already created
   shell: oc get projects | grep liveness-readiness || true
   register: lr_project_exist
+  changed_when: False
 
 - name: Create liveness-readiness project
   shell: oc new-project liveness-readiness --display-name="Liveness and Readiness" --description="Liveness and Readiness demonstration."
@@ -17,27 +19,11 @@
   shell: oc policy add-role-to-user admin {{openshift_user}} -n liveness-readiness
   when: lr_project_exist.stdout == "" and uninstall is undefined
 
-- name: Checking if liveness-readiness template is already installed
-  shell: oc get templates -n openshift | grep liveness-readiness-template || true
-  register: lv_template_installed
-
-- name: Copy template to remote machine
-  copy: src=liveness-readiness/liveness-readiness-sti-template.json dest=/tmp/liveness-readiness-sti-template.json
-  when: lv_template_installed.stdout == "" and uninstall is undefined
-
-- name: Create liveness-readiness template
-  shell: oc create -f /tmp/liveness-readiness-sti-template.json -n openshift
-  when: lv_template_installed.stdout == "" and uninstall is undefined
-
 - name: Create example app
-  shell: oc new-app liveness-readiness-template -n liveness-readiness
-  when: lv_template_installed.stdout == "" and uninstall is undefined
+  shell: oc process -f https://raw.githubusercontent.com/luszczynski/openshift-demo/master/liveness-readiness/liveness-readiness-sti-template.json | oc create -f - -n liveness-readiness
+  when: lr_project_exist.stdout == "" and uninstall is undefined
 
 # Uninstalling
 - name: Deleting liveness-readiness project
   shell: oc delete project liveness-readiness
   when: lr_project_exist.stdout != "" and uninstall is defined
-
-- name: Deleting liveness-readiness template
-  shell: oc delete template liveness-readiness-template -n openshift
-  when: lv_template_installed.stdout != "" and uninstall is defined

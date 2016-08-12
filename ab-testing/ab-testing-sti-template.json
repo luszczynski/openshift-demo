@@ -2,7 +2,7 @@
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "ab-testing-template",
+        "name": "ab-testing-sti-template",
         "creationTimestamp": null,
         "annotations": {
             "description": "An example PHP application with ab testing pattern",
@@ -12,144 +12,28 @@
     },
     "objects": [
         {
-            "kind": "Service",
-            "apiVersion": "v1",
-            "metadata": {
-                "name": "app-a",
-                "labels": {
-                    "app": "ab-testing",
-                    "abgroupmember": "true"
-                },
-                "annotations": {
-                    "description": "Exposes and load balances the application pods"
-                }
-            },
-            "spec": {
-                "ports": [
-                    {
-                        "name": "web",
-                        "protocol": "TCP",
-                        "port": 8080,
-                        "targetPort": 8080
-                    }
-                ],
-                "selector": {
-                    "name": "app-a"
-                }
-            }
-        },
-        {
-            "kind": "Service",
-            "apiVersion": "v1",
-            "metadata": {
-                "name": "app-b",
-                "labels": {
-                    "app": "ab-testing",
-                    "abgroupmember": "true"
-                },
-                "annotations": {
-                    "description": "Exposes and load balances the application pods"
-                }
-            },
-            "spec": {
-                "ports": [
-                    {
-                        "name": "web",
-                        "protocol": "TCP",
-                        "port": 8080,
-                        "targetPort": 8080
-                    }
-                ],
-                "selector": {
-                    "name": "app-b"
-                }
-            }
-        },
-        {
-            "kind": "Service",
-            "apiVersion": "v1",
-            "metadata": {
-                "name": "ab-service",
-                "labels": {
-                    "app": "ab-testing"
-                },
-                "annotations": {
-                    "description": "Exposes and load balances the application pods"
-                }
-            },
-            "spec": {
-                "ports": [
-                    {
-                        "name": "web",
-                        "protocol": "TCP",
-                        "port": 8080,
-                        "targetPort": 8080
-                    }
-                ],
-                "selector": {
-                    "abgroupmember": "true"
-                }
-            }
-        },
-        {
-            "kind": "Route",
-            "apiVersion": "v1",
-            "metadata": {
-                "name": "ab-testing",
-                "labels": {
-                    "app": "ab-testing"
-                }
-            },
-            "spec": {
-                "host": "${APPLICATION_DOMAIN}",
-                "to": {
-                    "kind": "Service",
-                    "name": "ab-service"
-                },
-                "port": {
-                    "targetPort": 8080
-                }
-            }
-        },
-        {
-            "kind": "ImageStream",
-            "apiVersion": "v1",
-            "metadata": {
-                "name": "app-a",
-                "annotations": {
-                    "description": "Keeps track of changes in the application image"
-                },
-                "labels": {
-                    "app": "ab-testing"
-                }
-            }
-        },
-        {
-            "kind": "ImageStream",
-            "apiVersion": "v1",
-            "metadata": {
-                "name": "app-b",
-                "annotations": {
-                    "description": "Keeps track of changes in the application image"
-                },
-                "labels": {
-                    "app": "ab-testing"
-                }
-            }
-        },
-        {
             "kind": "BuildConfig",
             "apiVersion": "v1",
             "metadata": {
                 "name": "app-a",
-                "annotations": {
-                    "description": "Defines how to build the application"
-                },
+                "creationTimestamp": null,
                 "labels": {
-                    "app": "ab-testing"
+                    "abgroupmember": "all",
+                    "app": "app-a"
+                },
+                "annotations": {
+                    "description": "Build Config"
                 }
             },
             "spec": {
+                "triggers": [
+                    {
+                        "type": "ImageChange"
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
                 "source": {
                     "type": "Git",
                     "git": {
@@ -173,15 +57,7 @@
                         "kind": "ImageStreamTag",
                         "name": "app-a:latest"
                     }
-                },
-                "triggers": [
-                    {
-                        "type": "ImageChange"
-                    },
-                    {
-                        "type": "ConfigChange"
-                    }
-                ]
+                }
             }
         },
         {
@@ -189,14 +65,24 @@
             "apiVersion": "v1",
             "metadata": {
                 "name": "app-b",
-                "annotations": {
-                    "description": "Defines how to build the application"
-                },
+                "creationTimestamp": null,
                 "labels": {
-                    "app": "ab-testing"
+                    "abgroupmember": "all",
+                    "app": "app-b"
+                },
+                "annotations": {
+                    "description": "Description"
                 }
             },
             "spec": {
+                "triggers": [
+                    {
+                        "type": "ImageChange"
+                    },
+                    {
+                        "type": "ConfigChange"
+                    }
+                ],
                 "source": {
                     "type": "Git",
                     "git": {
@@ -211,7 +97,7 @@
                         "from": {
                             "kind": "ImageStreamTag",
                             "namespace": "openshift",
-                            "name": "php:latest"
+                            "name": "php:5.6"
                         }
                     }
                 },
@@ -220,15 +106,39 @@
                         "kind": "ImageStreamTag",
                         "name": "app-b:latest"
                     }
+                }
+            }
+        },
+        {
+            "kind": "ImageStream",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-a",
+                "generation": 1,
+                "creationTimestamp": null,
+                "labels": {
+                    "abgroupmember": "all",
+                    "app": "app-a"
                 },
-                "triggers": [
-                    {
-                        "type": "ImageChange"
-                    },
-                    {
-                        "type": "ConfigChange"
-                    }
-                ]
+                "annotations": {
+                    "description": "Description"
+                }
+            }
+        },
+        {
+            "kind": "ImageStream",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-b",
+                "generation": 1,
+                "creationTimestamp": null,
+                "labels": {
+                    "abgroupmember": "all",
+                    "app": "app-b"
+                },
+                "annotations": {
+                    "description": "Description"
+                }
             }
         },
         {
@@ -236,12 +146,13 @@
             "apiVersion": "v1",
             "metadata": {
                 "name": "app-a",
-                "annotations": {
-                    "description": "Defines how to deploy the application server"
-                },
+                "creationTimestamp": null,
                 "labels": {
-                    "app": "ab-testing",
-                    "abgroupmember": "true"
+                    "abgroupmember": "all",
+                    "app": "app-a"
+                },
+                "annotations": {
+                    "description": "Description"
                 }
             },
             "spec": {
@@ -253,7 +164,8 @@
                         "timeoutSeconds": 600,
                         "maxUnavailable": "25%",
                         "maxSurge": "25%"
-                    }
+                    },
+                    "resources": {}
                 },
                 "triggers": [
                     {
@@ -274,15 +186,18 @@
                     }
                 ],
                 "replicas": 1,
+                "test": false,
                 "selector": {
-                    "name": "app-a",
-                    "abgroupmember": "true"
+                    "abgroupmember": "all",
+                    "deploymentconfig": "app-a"
                 },
                 "template": {
                     "metadata": {
+                        "creationTimestamp": null,
                         "labels": {
-                            "name": "app-a",
-                            "app": "app-a"
+                            "abgroupmember": "all",
+                            "app": "app-a",
+                            "deploymentconfig": "app-a"
                         }
                     },
                     "spec": {
@@ -292,15 +207,22 @@
                                 "image": "app-a",
                                 "ports": [
                                     {
-                                        "containerPort": 8080
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
                                     }
-                                ]
+                                ],
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "imagePullPolicy": "Always"
                             }
-                        ]
+                        ],
+                        "restartPolicy": "Always",
+                        "terminationGracePeriodSeconds": 30,
+                        "dnsPolicy": "ClusterFirst",
+                        "securityContext": {}
                     }
                 }
             },
-
             "status": {}
         },
         {
@@ -308,12 +230,13 @@
             "apiVersion": "v1",
             "metadata": {
                 "name": "app-b",
-                "annotations": {
-                    "description": "Defines how to deploy the application server"
-                },
+                "creationTimestamp": null,
                 "labels": {
-                    "app": "ab-testing",
-                    "abgroupmember": "true"
+                    "abgroupmember": "all",
+                    "app": "app-b"
+                },
+                "annotations": {
+                    "description": "Description"
                 }
             },
             "spec": {
@@ -325,7 +248,8 @@
                         "timeoutSeconds": 600,
                         "maxUnavailable": "25%",
                         "maxSurge": "25%"
-                    }
+                    },
+                    "resources": {}
                 },
                 "triggers": [
                     {
@@ -346,15 +270,17 @@
                     }
                 ],
                 "replicas": 1,
+                "test": false,
                 "selector": {
-                    "name": "app-b",
-                    "abgroupmember": "true"
+                    "deploymentconfig": "app-b"
                 },
                 "template": {
                     "metadata": {
+                        "creationTimestamp": null,
                         "labels": {
-                            "name": "app-b",
-                            "app": "app-b"
+                            "abgroupmember": "all",
+                            "app": "app-b",
+                            "deploymentconfig": "app-b"
                         }
                     },
                     "spec": {
@@ -364,34 +290,144 @@
                                 "image": "app-b",
                                 "ports": [
                                     {
-                                        "containerPort": 8080
+                                        "containerPort": 8080,
+                                        "protocol": "TCP"
                                     }
-                                ]
+                                ],
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "imagePullPolicy": "Always"
                             }
-                        ]
+                        ],
+                        "restartPolicy": "Always",
+                        "terminationGracePeriodSeconds": 30,
+                        "dnsPolicy": "ClusterFirst",
+                        "securityContext": {}
                     }
                 }
             },
-
             "status": {}
-        }
-    ],
-    "parameters": [
-        {
-            "name": "SOURCE_REPOSITORY_URL",
-            "description": "The URL of the repository with your application source code",
-            "value": "https://github.com/openshift/cakephp-ex.git"
         },
         {
-            "name": "SOURCE_REPOSITORY_REF",
-            "description": "Set this to a branch name, tag or other ref of your repository if you are not using the default branch"
+            "kind": "Route",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "ab-route",
+                "creationTimestamp": null,
+                "labels": {
+                    "abgroupmember": "all",
+                    "app": "app-a"
+                },
+                "annotations": {
+                    "openshift.io/host.generated": "true"
+                }
+            },
+            "spec": {
+                "host": "",
+                "to": {
+                    "kind": "Service",
+                    "name": "ab-service"
+                },
+                "port": {
+                    "targetPort": "default"
+                }
+            }
         },
         {
-            "name": "APPLICATION_DOMAIN",
-            "description": "The exposed hostname that will route to the service, if left blank a value will be defaulted."
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "ab-service",
+                "creationTimestamp": null,
+                "labels": {
+                    "abgroupmember": "all",
+                    "app": "app-a"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "default",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "abgroupmember": "all"
+                },
+                "type": "ClusterIP",
+                "sessionAffinity": "None"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-a",
+                "creationTimestamp": null,
+                "labels": {
+                    "abgroupmember": "all",
+                    "app": "app-a"
+                },
+                "annotations": {
+                    "description": "Description"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "8080-tcp",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "deploymentconfig": "app-a"
+                },
+                "type": "ClusterIP",
+                "sessionAffinity": "None"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "kind": "Service",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "app-b",
+                "creationTimestamp": null,
+                "labels": {
+                    "abgroupmember": "all",
+                    "app": "app-b"
+                },
+                "annotations": {
+                    "description": "Description"
+                }
+            },
+            "spec": {
+                "ports": [
+                    {
+                        "name": "8080-tcp",
+                        "protocol": "TCP",
+                        "port": 8080,
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "deploymentconfig": "app-b"
+                },
+                "type": "ClusterIP",
+                "sessionAffinity": "None"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
         }
-    ],
-    "labels": {
-        "template": "ab-testing"
-    }
+    ]
 }

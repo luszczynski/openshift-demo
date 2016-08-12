@@ -5,4 +5,4 @@
 
 - name: Create security project
   shell: oc new-project security --display-name="Security" --description="Images security with Openshift triggers"
-  when: devops_project_installed.stdout == ""
+  when: devops_project_installed.stdout == "" and uninstall is undefined

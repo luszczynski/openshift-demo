@@ -4,10 +4,12 @@
 # Installing
 - name: Logging with system:admin
   shell: oc login -u system:admin
+  changed_when: False
 
 - name: Checking if quota project is already created
   shell: oc get projects | grep quota || true
   register: quota_project_installed
+  changed_when: False
 
 - name: Create quota project
   shell: oc new-project quota --display-name="Quota" --description="A example how Openshift can limit and enforce quota"
@@ -17,27 +19,11 @@
   shell: oc policy add-role-to-user admin {{openshift_user}} -n quota
   when: quota_project_installed.stdout == "" and uninstall is undefined
 
-- name: Checking if quota template is already installed
-  shell: oc get templates -n openshift | grep quota-template || true
-  register: quota_template_installed
-
-- name: Copy template to remote machine
-  copy: src=quota-limits/quota-sti-template.json dest=/tmp/quota-sti-template.json
-  when: quota_template_installed.stdout == "" and uninstall is undefined
-
-- name: Create quota template
-  shell: oc create -f /tmp/quota-sti-template.json -n openshift
-  when: quota_template_installed.stdout == "" and uninstall is undefined
-
 - name: Create example app
-  shell: oc new-app quota-template -n quota
-  when: quota_template_installed.stdout == "" and uninstall is undefined
+  shell: oc process -f https://raw.githubusercontent.com/luszczynski/openshift-demo/master/quota-limits/quota-sti-template.json | oc create -f - -n quota
+  when: quota_project_installed.stdout == "" and uninstall is undefined
 
 # Uninstalling
 - name: Deleting quota project
   shell: oc delete project quota
   when: quota_project_installed.stdout != "" and uninstall is defined
-
-- name: Deleting quota template
-  shell: oc delete template quota-template -n openshift
-  when: quota_template_installed.stdout != "" and uninstall is defined
