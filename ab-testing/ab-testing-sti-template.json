@@ -188,7 +188,6 @@
                 "replicas": 1,
                 "test": false,
                 "selector": {
-                    "abgroupmember": "all",
                     "deploymentconfig": "app-a"
                 },
                 "template": {
